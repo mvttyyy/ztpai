@@ -11,7 +11,7 @@ BeatThat to aplikacja internetowa do udostępniania darmowych loopów i sampli a
 # 2. Architektura
 - Twarde rozdzielenie warstw: dwa osobne frameworki i serwery.
 - Backend (API): NestJS (Node.js), PostgreSQL (Prisma ORM), RabbitMQ (kolejki), Swagger/OpenAPI.
-- Frontend (WEB): Next.js (React) – bez API routes; front tylko konsumuje REST API.
+- Frontend (WEB): Next.js (React)
 - Transkodowanie/preview: job w kolejce generuje MP3/OGG 128 kb/s + waveform/spektrogram (preview).
 - Autoryzacja: JWT (access krótkożyjący, refresh dłuższy) w HttpOnly Secure cookies.
 - Konteneryzacja: Docker + docker-compose.
