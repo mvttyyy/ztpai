@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: ./beatthat-api
+    env_file:
+      - ./beatthat-api/.env
+    environment:
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    volumes:
+      - ./beatthat-api:/usr/src/app
+      - api-node-modules:/usr/src/app/node_modules
+
+volumes:
+  api-node-modules:
