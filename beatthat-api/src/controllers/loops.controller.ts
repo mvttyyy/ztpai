@@ -21,15 +21,16 @@ export class LoopsController {
     res: Response,
     next: NextFunction
   ): void => {
-    const loopId = Number.parseInt(req.params.id, 10);
+    const rawId = req.params.id;
 
-    if (Number.isNaN(loopId)) {
-      return next(createHttpError(404, {
-        message: "Loop not found",
-        code: "LOOP_NOT_FOUND"
+    if (!/^\d+$/.test(rawId)) {
+      return next(createHttpError(400, {
+        message: "Loop identifier must be numeric",
+        code: "INVALID_LOOP_ID"
       }));
     }
 
+    const loopId = Number.parseInt(rawId, 10);
     const loop = this.service.findById(loopId);
 
     if (!loop) {
