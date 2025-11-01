@@ -11,4 +11,8 @@ export class LoopService {
   findAll(): Loop[] {
     return this.#loops;
   }
+
+  findById(id: number): Loop | undefined {
+    return this.#loops.find(loop => loop.id === id);
+  }
 }
