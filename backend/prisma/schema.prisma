@@ -19,11 +19,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  loops     Loop[]
-  comments  Comment[]
-  ratings   Rating[]
-  favorites Favorite[]
-  downloads Download[]
+  loops         Loop[]
+  comments      Comment[]
+  ratings       Rating[]
+  favorites     Favorite[]
+  downloads     Download[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -146,4 +147,27 @@ model Download {
   loop   Loop    @relation(fields: [loopId], references: [id], onDelete: Cascade)
 
   @@map("downloads")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_COMMENT
+  NEW_RATING
+  NEW_DOWNLOAD
+  LOOP_PROCESSED
+  SYSTEM
 }
