@@ -23,6 +23,7 @@ model User {
   comments  Comment[]
   ratings   Rating[]
   favorites Favorite[]
+  downloads Download[]
 
   @@map("users")
 }
@@ -58,6 +59,7 @@ model Loop {
   comments  Comment[]
   ratings   Rating[]
   favorites Favorite[]
+  downloads Download[]
 
   @@map("loops")
 }
@@ -129,4 +131,19 @@ model Favorite {
 
   @@unique([userId, loopId])
   @@map("favorites")
+}
+
+model Download {
+  id           String   @id @default(uuid())
+  downloadHash String   @unique
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  loopId String
+  loop   Loop    @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@map("downloads")
 }
