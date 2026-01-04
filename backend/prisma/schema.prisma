@@ -25,6 +25,7 @@ model User {
   favorites     Favorite[]
   downloads     Download[]
   notifications Notification[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
 }
@@ -183,4 +184,16 @@ model Listen {
 
   @@unique([loopId, ipHash])
   @@map("listens")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
 }
