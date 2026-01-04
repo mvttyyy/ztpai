@@ -51,6 +51,8 @@ model Loop {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  tags LoopTag[]
+
   @@map("loops")
 }
 
@@ -66,5 +68,17 @@ model Tag {
   name      String   @unique
   createdAt DateTime @default(now())
 
+  loops LoopTag[]
+
   @@map("tags")
+}
+
+model LoopTag {
+  loopId String
+  tagId  String
+  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([loopId, tagId])
+  @@map("loop_tags")
 }
