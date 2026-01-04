@@ -60,3 +60,11 @@ enum LoopStatus {
   READY
   FAILED
 }
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("tags")
+}
