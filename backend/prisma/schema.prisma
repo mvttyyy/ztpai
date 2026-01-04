@@ -61,6 +61,7 @@ model Loop {
   ratings   Rating[]
   favorites Favorite[]
   downloads Download[]
+  listens   Listen[]
 
   @@map("loops")
 }
@@ -170,4 +171,16 @@ enum NotificationType {
   NEW_DOWNLOAD
   LOOP_PROCESSED
   SYSTEM
+}
+
+model Listen {
+  id        String   @id @default(uuid())
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  loopId String
+  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@unique([loopId, ipHash])
+  @@map("listens")
 }
