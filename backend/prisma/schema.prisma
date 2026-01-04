@@ -19,10 +19,44 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  loops Loop[]
+
   @@map("users")
 }
 
 enum UserRole {
   USER
   ADMIN
+}
+
+model Loop {
+  id            String     @id @default(uuid())
+  title         String
+  slug          String     @unique
+  description   String?
+  bpm           Int
+  key           String?
+  genre         String?
+  duration      Float
+  fileUrl       String
+  previewUrl    String?
+  waveformData  Json?
+  fileHash      String
+  status        LoopStatus @default(PENDING)
+  downloadCount Int        @default(0)
+  listenCount   Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("loops")
+}
+
+enum LoopStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
 }
