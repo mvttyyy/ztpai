@@ -19,7 +19,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  loops Loop[]
+  loops    Loop[]
+  comments Comment[]
 
   @@map("users")
 }
@@ -51,7 +52,8 @@ model Loop {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tags LoopTag[]
+  tags     LoopTag[]
+  comments Comment[]
 
   @@map("loops")
 }
@@ -81,4 +83,18 @@ model LoopTag {
 
   @@id([loopId, tagId])
   @@map("loop_tags")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loopId String
+  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
 }
