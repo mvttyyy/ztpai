@@ -37,6 +37,54 @@ services:
       timeout: 10s
       retries: 5
 
+  # Backend API (NestJS)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: beatthat-backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://beatthat:beatthat_secret@postgres:5432/beatthat?schema=public
+      RABBITMQ_URL: amqp://beatthat:beatthat_secret@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key-change-in-production
+      CORS_ORIGIN: http://localhost:3000
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: npm run start:dev
+
+  # Worker for audio processing
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: beatthat-worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://beatthat:beatthat_secret@postgres:5432/beatthat?schema=public
+      RABBITMQ_URL: amqp://beatthat:beatthat_secret@rabbitmq:5672
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: npm run worker
+
 volumes:
   postgres_data:
   rabbitmq_data:
