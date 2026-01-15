@@ -29,13 +29,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       this.connection = await amqp.connect(url);
       this.channel = await this.connection!.createChannel();
 
+      // Assert all queues
       for (const queue of Object.values(QUEUES)) {
         await this.channel!.assertQueue(queue, { durable: true });
       }
 
-      console.log('Connected to RabbitMQ');
+      console.log('✅ Connected to RabbitMQ');
     } catch (error) {
-      console.error('Failed to connect to RabbitMQ:', error);
+      console.error('❌ Failed to connect to RabbitMQ:', error);
+      // Retry connection after delay
       setTimeout(() => this.connect(), 5000);
     }
   }
@@ -74,7 +76,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
           this.channel?.ack(msg);
         } catch (error) {
           console.error(`Error processing message from ${queue}:`, error);
-          this.channel?.nack(msg, false, false);
+          this.channel?.nack(msg, false, false); // Don't requeue failed messages
         }
       }
     });
