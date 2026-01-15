@@ -1,3 +1,6 @@
+// Prisma schema for BeatThat application
+// PostgreSQL database in 3NF
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,26 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  username     String   @unique
-  passwordHash String
-  role         UserRole @default(USER)
-  avatarUrl    String?
-  bio          String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// ==================== USER & AUTH ====================
 
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+  role          UserRole  @default(USER)
+  avatarUrl     String?   @map("avatar_url")
+  bio           String?
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
   loops         Loop[]
-  comments      Comment[]
   ratings       Rating[]
+  comments      Comment[]
   favorites     Favorite[]
   downloads     Download[]
-  notifications Notification[]
+  listens       Listen[]
   refreshTokens RefreshToken[]
   chatMessages  ChatMessage[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -36,120 +43,192 @@ enum UserRole {
   ADMIN
 }
 
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ==================== LOOPS & AUDIO ====================
+
 model Loop {
-  id            String     @id @default(uuid())
-  title         String
-  slug          String     @unique
-  description   String?
-  bpm           Int
-  key           String?
-  genre         String?
-  duration      Float
-  fileUrl       String
-  previewUrl    String?
-  waveformData  Json?
-  fileHash      String
-  status        LoopStatus @default(PENDING)
-  downloadCount Int        @default(0)
-  listenCount   Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id              String      @id @default(uuid())
+  title           String
+  slug            String      @unique
+  description     String?
+  bpm             Int
+  key             String?     // Musical key (e.g., "Am", "C#m", "F")
+  duration        Float       // Duration in seconds
+  genre           String?
+  
+  // File paths
+  originalFile    String      @map("original_file")
+  previewFile     String?     @map("preview_file")
+  waveformData    Json?       @map("waveform_data")
+  
+  // Processing status
+  status          LoopStatus  @default(PENDING)
+  
+  // Stats (denormalized for performance)
+  downloadCount   Int         @default(0) @map("download_count")
+  listenCount     Int         @default(0) @map("listen_count")
+  favoriteCount   Int         @default(0) @map("favorite_count")
+  averageRating   Float       @default(0) @map("average_rating")
+  ratingCount     Int         @default(0) @map("rating_count")
+  
+  // Certified download hash
+  fileHash        String?     @map("file_hash")
+  
+  userId          String      @map("user_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags            LoopTag[]
+  ratings         Rating[]
+  comments        Comment[]
+  favorites       Favorite[]
+  downloads       Download[]
+  listens         Listen[]
 
-  tags      LoopTag[]
-  comments  Comment[]
-  ratings   Rating[]
-  favorites Favorite[]
-  downloads Download[]
-  listens   Listen[]
-
+  @@index([bpm])
+  @@index([key])
+  @@index([genre])
+  @@index([status])
+  @@index([createdAt])
+  @@index([downloadCount])
+  @@index([averageRating])
   @@map("loops")
 }
 
 enum LoopStatus {
-  PENDING
-  PROCESSING
-  READY
-  FAILED
+  PENDING     // Waiting for processing
+  PROCESSING  // Currently being processed
+  READY       // Ready for use
+  FAILED      // Processing failed
 }
 
 model Tag {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  loops LoopTag[]
+  loops     LoopTag[]
 
   @@map("tags")
 }
 
 model LoopTag {
-  loopId String
-  tagId  String
-  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
-  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  loopId String @map("loop_id")
+  tagId  String @map("tag_id")
+
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([loopId, tagId])
   @@map("loop_tags")
 }
 
-model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  loopId String
-  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
-}
+// ==================== INTERACTIONS ====================
 
 model Rating {
   id        String   @id @default(uuid())
-  value     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  value     Int      // 1-5 stars
+  userId    String   @map("user_id")
+  loopId    String   @map("loop_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  loopId String
-  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
 
   @@unique([userId, loopId])
   @@map("ratings")
 }
 
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String   @map("user_id")
+  loopId    String   @map("loop_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@index([loopId])
+  @@map("comments")
+}
+
 model Favorite {
   id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+  userId    String   @map("user_id")
+  loopId    String   @map("loop_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  loopId String
-  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
 
   @@unique([userId, loopId])
   @@map("favorites")
 }
 
+// ==================== ANALYTICS ====================
+
 model Download {
-  id           String   @id @default(uuid())
-  downloadHash String   @unique
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  loopId         String   @map("loop_id")
+  certificateHash String  @map("certificate_hash") // Hash for certified download proof
+  ipAddress      String?  @map("ip_address")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  loopId String
-  loop   Loop    @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
 
+  @@index([loopId])
+  @@index([createdAt])
   @@map("downloads")
+}
+
+model Listen {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  loopId    String   @map("loop_id")
+  listenDate DateTime @default(now()) @map("listen_date")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loop Loop @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  // Ensure only 1 counted listen per user per loop per day
+  @@unique([userId, loopId, listenDate])
+  @@index([loopId])
+  @@index([listenDate])
+  @@map("listens")
+}
+
+// ==================== REALTIME FEATURES ====================
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String   @map("user_id")
+  roomId    String   @map("room_id") // e.g., "general" or loop-specific chat
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([createdAt])
+  @@map("chat_messages")
 }
 
 model Notification {
@@ -157,13 +236,15 @@ model Notification {
   type      NotificationType
   title     String
   message   String
-  data      Json?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
+  isRead    Boolean          @default(false) @map("is_read")
+  data      Json?            // Additional data (e.g., loopId, commentId)
+  userId    String           @map("user_id")
+  createdAt DateTime         @default(now()) @map("created_at")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, isRead])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -173,42 +254,4 @@ enum NotificationType {
   NEW_DOWNLOAD
   LOOP_PROCESSED
   SYSTEM
-}
-
-model Listen {
-  id        String   @id @default(uuid())
-  ipHash    String
-  createdAt DateTime @default(now())
-
-  loopId String
-  loop   Loop   @relation(fields: [loopId], references: [id], onDelete: Cascade)
-
-  @@unique([loopId, ipHash])
-  @@map("listens")
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("refresh_tokens")
-}
-
-model ChatMessage {
-  id        String   @id @default(uuid())
-  content   String
-  roomId    String
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([roomId])
-  @@index([createdAt])
-  @@map("chat_messages")
 }
