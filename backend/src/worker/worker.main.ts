@@ -46,6 +46,7 @@ async function processAudio(message: AudioProcessingMessage) {
   console.log(`Processing audio for loop: ${message.loopId}`);
 
   try {
+    // Update status to processing
     await prisma.loop.update({
       where: { id: message.loopId },
       data: { status: LoopStatus.PROCESSING },
@@ -55,11 +56,13 @@ async function processAudio(message: AudioProcessingMessage) {
     const previewDir = './uploads/previews';
     const waveformDir = './uploads/waveforms';
 
+    // Ensure directories exist
     if (!fs.existsSync(previewDir)) fs.mkdirSync(previewDir, { recursive: true });
     if (!fs.existsSync(waveformDir)) fs.mkdirSync(waveformDir, { recursive: true });
 
     const previewPath = path.join(previewDir, `${message.loopId}.mp3`);
 
+    // Generate preview (128 kbps MP3)
     await new Promise<void>((resolve, reject) => {
       ffmpeg(inputPath)
         .audioCodec('libmp3lame')
@@ -76,19 +79,24 @@ async function processAudio(message: AudioProcessingMessage) {
         .save(previewPath);
     });
 
+    // Get actual audio duration
     const duration = await getAudioDuration(inputPath);
     console.log(`Detected duration for loop ${message.loopId}: ${duration}s`);
 
+    // Generate waveform data
     const waveformData = await generateWaveformData(inputPath);
 
+    // Store relative path for preview file
     const relativePreviewPath = `previews/${message.loopId}.mp3`;
 
+    // Update loop with preview path, waveform data, and actual duration
     const updateData: any = {
       previewFile: relativePreviewPath,
       waveformData: waveformData,
       status: LoopStatus.READY,
     };
     
+    // Only update duration if we got a valid value
     if (duration > 0) {
       updateData.duration = duration;
     }
@@ -102,6 +110,7 @@ async function processAudio(message: AudioProcessingMessage) {
   } catch (error) {
     console.error(`Error processing loop ${message.loopId}:`, error);
 
+    // Update status to failed
     await prisma.loop.update({
       where: { id: message.loopId },
       data: { status: LoopStatus.FAILED },
@@ -114,12 +123,14 @@ async function generateWaveformData(filePath: string): Promise<number[]> {
     const samples: number[] = [];
     let maxSample = 0;
 
+    // Use ffmpeg to extract audio samples
     ffmpeg(filePath)
       .format('f32le')
       .audioChannels(1)
-      .audioFrequency(8000)
+      .audioFrequency(8000) // Downsample for waveform
       .on('error', (err) => {
         console.error('Waveform generation error:', err);
+        // Return simple waveform on error
         resolve(Array(100).fill(0.5));
       })
       .pipe()
@@ -133,6 +144,7 @@ async function generateWaveformData(filePath: string): Promise<number[]> {
         }
       })
       .on('end', () => {
+        // Normalize and reduce to ~100 samples
         const targetSamples = 100;
         const step = Math.max(1, Math.floor(samples.length / targetSamples));
         const normalizedSamples: number[] = [];
@@ -140,6 +152,7 @@ async function generateWaveformData(filePath: string): Promise<number[]> {
         for (let i = 0; i < samples.length; i += step) {
           if (normalizedSamples.length >= targetSamples) break;
           
+          // Average a chunk of samples
           let sum = 0;
           let count = 0;
           for (let j = i; j < i + step && j < samples.length; j++) {
@@ -202,30 +215,34 @@ async function processNotification(message: NotificationMessage) {
 }
 
 async function main() {
-  console.log('Starting BeatThat Worker...');
+  console.log('🔧 Starting BeatThat Worker...');
 
   const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 
   let connection: amqp.ChannelModel | null = null;
   let channel: amqp.Channel | null = null;
 
+  // Retry connection
   while (!connection) {
     try {
       connection = await amqp.connect(rabbitmqUrl);
-      console.log('Connected to RabbitMQ');
+      console.log('✅ Connected to RabbitMQ');
     } catch (error) {
-      console.log('Waiting for RabbitMQ...');
+      console.log('⏳ Waiting for RabbitMQ...');
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
 
   channel = await connection!.createChannel();
 
+  // Assert queues
   await channel!.assertQueue(QUEUES.AUDIO_PROCESSING, { durable: true });
   await channel!.assertQueue(QUEUES.NOTIFICATIONS, { durable: true });
 
+  // Set prefetch
   channel!.prefetch(1);
 
+  // Consume audio processing queue
   channel!.consume(QUEUES.AUDIO_PROCESSING, async (msg) => {
     if (msg) {
       try {
@@ -239,6 +256,7 @@ async function main() {
     }
   });
 
+  // Consume notifications queue
   channel!.consume(QUEUES.NOTIFICATIONS, async (msg) => {
     if (msg) {
       try {
@@ -252,7 +270,7 @@ async function main() {
     }
   });
 
-  console.log('Worker is running and waiting for messages...');
+  console.log('🎵 Worker is running and waiting for messages...');
 }
 
 main().catch(console.error);
