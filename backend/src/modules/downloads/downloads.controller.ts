@@ -38,6 +38,7 @@ export class DownloadsController {
     const ipAddress = req.ip || req.headers['x-forwarded-for']?.toString();
     const result = await this.downloadsService.download(user.id, loopId, ipAddress);
 
+    // Return download info - frontend will fetch file from /uploads/
     return {
       success: true,
       fileName: result.fileName,
