@@ -45,6 +45,7 @@ export class ChatService {
   }
 
   async getRooms() {
+    // Get rooms with message counts
     const rooms = await this.prisma.chatMessage.groupBy({
       by: ['roomId'],
       _count: { id: true },

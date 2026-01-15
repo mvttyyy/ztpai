@@ -32,7 +32,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private userSockets = new Map<string, string[]>();
+  private userSockets = new Map<string, string[]>(); // userId -> socketIds
 
   constructor(
     private chatService: ChatService,
@@ -66,10 +66,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.user = user;
 
+      // Track user sockets
       const sockets = this.userSockets.get(user.id) || [];
       sockets.push(client.id);
       this.userSockets.set(user.id, sockets);
 
+      // Join default room
       client.join('general');
 
       console.log(`User ${user.username} connected to chat`);
@@ -129,11 +131,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.content,
     );
 
+    // Broadcast to room
     this.server.to(data.roomId).emit('new_message', message);
 
     return message;
   }
 
+  // Method to send notification to specific user
   sendToUser(userId: string, event: string, data: any) {
     const sockets = this.userSockets.get(userId);
     if (sockets) {
