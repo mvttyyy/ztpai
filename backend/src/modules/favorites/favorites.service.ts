@@ -1,18 +1,22 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+// UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class FavoritesService {
   constructor(private prisma: PrismaService) {}
 
+  // Helper to find loop by ID or slug and return the actual ID
   private async resolveLoopId(idOrSlug: string): Promise<string> {
+    // First try to find by slug
     let loop = await this.prisma.loop.findUnique({ 
       where: { slug: idOrSlug },
       select: { id: true }
     });
     
+    // If not found by slug and looks like a UUID, try by id
     if (!loop && UUID_REGEX.test(idOrSlug)) {
       loop = await this.prisma.loop.findUnique({ 
         where: { id: idOrSlug },
@@ -28,8 +32,10 @@ export class FavoritesService {
   }
 
   async add(userId: string, loopIdOrSlug: string) {
+    // Verify loop exists and get actual ID
     const loopId = await this.resolveLoopId(loopIdOrSlug);
 
+    // Check if already favorited
     const existing = await this.prisma.favorite.findUnique({
       where: {
         userId_loopId: { userId, loopId },
@@ -40,10 +46,12 @@ export class FavoritesService {
       throw new ConflictException('Loop already in favorites');
     }
 
+    // Add favorite
     const favorite = await this.prisma.favorite.create({
       data: { userId, loopId },
     });
 
+    // Increment favorite count
     await this.prisma.loop.update({
       where: { id: loopId },
       data: { favoriteCount: { increment: 1 } },
@@ -69,6 +77,7 @@ export class FavoritesService {
       where: { id: favorite.id },
     });
 
+    // Decrement favorite count
     await this.prisma.loop.update({
       where: { id: loopId },
       data: { favoriteCount: { decrement: 1 } },
