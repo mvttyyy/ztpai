@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RabbitMQService, QUEUES } from '../../rabbitmq/rabbitmq.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
+// UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
@@ -12,12 +13,15 @@ export class CommentsService {
     private rabbitMQ: RabbitMQService,
   ) {}
 
+  // Helper to find loop by ID or slug and return actual ID and info
   private async resolveLoop(idOrSlug: string): Promise<{ id: string; userId: string; title: string }> {
+    // First try to find by slug
     let loop = await this.prisma.loop.findUnique({ 
       where: { slug: idOrSlug },
       select: { id: true, userId: true, title: true }
     });
     
+    // If not found by slug and looks like a UUID, try by id
     if (!loop && UUID_REGEX.test(idOrSlug)) {
       loop = await this.prisma.loop.findUnique({ 
         where: { id: idOrSlug },
@@ -33,6 +37,7 @@ export class CommentsService {
   }
 
   async create(userId: string, loopIdOrSlug: string, dto: CreateCommentDto) {
+    // Verify loop exists and get actual ID
     const loop = await this.resolveLoop(loopIdOrSlug);
     const loopId = loop.id;
 
@@ -53,6 +58,7 @@ export class CommentsService {
       },
     });
 
+    // Send notification to loop owner
     if (loop.userId !== userId) {
       await this.rabbitMQ.publish(QUEUES.NOTIFICATIONS, {
         type: 'NEW_COMMENT',
