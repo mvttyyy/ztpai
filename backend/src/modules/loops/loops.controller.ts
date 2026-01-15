@@ -171,6 +171,7 @@ export class LoopsController {
     const mimeType = ext === '.mp3' ? 'audio/mpeg' : ext === '.ogg' ? 'audio/ogg' : 'audio/wav';
 
     if (range) {
+      // Handle Range requests for quick start (TTFS optimization)
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;

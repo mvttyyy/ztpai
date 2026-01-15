@@ -57,12 +57,14 @@ export class CreateLoopDto {
   @ArrayMaxSize(10)
   @Transform(({ value }) => {
     if (typeof value === 'string') {
+      // Try to parse as JSON first (for JSON.stringify'd arrays)
       try {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) {
           return parsed.map((s: string) => s.trim().toLowerCase());
         }
       } catch {}
+      // Otherwise split by comma
       return value.split(',').map((s: string) => s.trim().toLowerCase());
     }
     if (Array.isArray(value)) {

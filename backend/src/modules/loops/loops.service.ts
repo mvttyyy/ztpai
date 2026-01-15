@@ -12,6 +12,7 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
@@ -21,18 +22,20 @@ export class LoopsService {
     private rabbitMQ: RabbitMQService,
   ) {}
 
+  // Generate URL-friendly slug from title
   private generateSlug(title: string): string {
     return title
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .substring(0, 60);
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+      .substring(0, 60); // Limit length
   }
 
+  // Generate unique slug by appending number if needed
   private async generateUniqueSlug(title: string): Promise<string> {
     let baseSlug = this.generateSlug(title);
     if (!baseSlug) baseSlug = 'loop';
@@ -50,7 +53,8 @@ export class LoopsService {
 
   private async getAudioDuration(filePath: string): Promise<number> {
     try {
-      const { stdout } = await execAsync(
+      // Use ffprobe to get duration - works in Docker with ffmpeg installed
+      const { stdout, stderr } = await execAsync(
         `ffprobe -v quiet -print_format json -show_format "${filePath}"`
       );
       const data = JSON.parse(stdout);
@@ -60,7 +64,9 @@ export class LoopsService {
       throw new Error('Could not parse duration from ffprobe output');
     } catch (error) {
       console.error('Error getting audio duration:', error);
-      return 30;
+      // Fallback: return a default duration and let the worker detect it properly
+      console.log('Using fallback duration detection - will be updated by worker');
+      return 30; // Default 30 seconds, worker will update it
     }
   }
 
@@ -69,11 +75,13 @@ export class LoopsService {
       throw new BadRequestException('Audio file is required');
     }
 
+    // Get duration from file using ffprobe
     let duration = dto.duration;
     if (!duration) {
       duration = await this.getAudioDuration(file.path);
     }
 
+    // Validate duration (1-60 seconds)
     if (duration < 1) {
       throw new BadRequestException('Loop must be at least 1 second long');
     }
@@ -81,12 +89,17 @@ export class LoopsService {
       throw new BadRequestException('Loop cannot exceed 60 seconds (1 minute)');
     }
 
+    // Generate file hash for certified downloads
     const fileBuffer = fs.readFileSync(file.path);
     const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
+    // Store just the filename (relative to uploads directory)
     const originalFileName = `originals/${file.filename}`;
+
+    // Generate unique slug from title
     const slug = await this.generateUniqueSlug(dto.title);
 
+    // Create loop record
     const loop = await this.prisma.loop.create({
       data: {
         title: dto.title,
@@ -103,6 +116,7 @@ export class LoopsService {
       },
     });
 
+    // Handle tags
     if (dto.tags && dto.tags.length > 0) {
       for (const tagName of dto.tags) {
         const tag = await this.prisma.tag.upsert({
@@ -120,6 +134,7 @@ export class LoopsService {
       }
     }
 
+    // Queue for audio processing (preview generation + waveform)
     await this.rabbitMQ.publish(QUEUES.AUDIO_PROCESSING, {
       loopId: loop.id,
       filePath: file.path,
@@ -147,8 +162,10 @@ export class LoopsService {
 
     const skip = (page - 1) * limit;
 
+    // Build where clause
     const where: any = {};
 
+    // Only show ready loops to public (unless admin or owner filter)
     if (!userId && !status) {
       where.status = LoopStatus.READY;
     } else if (status) {
@@ -156,10 +173,13 @@ export class LoopsService {
     }
 
     if (search) {
+      // Check if search is a number (BPM search)
       const numericSearch = parseInt(search, 10);
       if (!isNaN(numericSearch) && numericSearch > 0 && numericSearch <= 300) {
+        // Search by BPM (exact match)
         where.bpm = numericSearch;
       } else {
+        // Text search in title and description
         where.OR = [
           { title: { contains: search, mode: 'insensitive' } },
           { description: { contains: search, mode: 'insensitive' } },
@@ -187,6 +207,7 @@ export class LoopsService {
       };
     }
 
+    // Build orderBy
     const orderBy: any = {};
     orderBy[sortBy] = sortOrder;
 
@@ -226,7 +247,9 @@ export class LoopsService {
     };
   }
 
+  // Find by ID or slug
   async findByIdOrSlug(idOrSlug: string, userId?: string) {
+    // Try to find by slug first (more common for public URLs)
     let loop = await this.prisma.loop.findUnique({
       where: { slug: idOrSlug },
       include: {
@@ -251,6 +274,7 @@ export class LoopsService {
       },
     });
 
+    // If not found by slug and looks like a valid UUID, try by ID (for backwards compatibility)
     if (!loop && UUID_REGEX.test(idOrSlug)) {
       loop = await this.prisma.loop.findUnique({
         where: { id: idOrSlug },
@@ -304,9 +328,12 @@ export class LoopsService {
       throw new BadRequestException('You can only update your own loops');
     }
 
+    // Update tags if provided
     if (dto.tags) {
+      // Remove existing tags
       await this.prisma.loopTag.deleteMany({ where: { loopId: id } });
 
+      // Add new tags
       for (const tagName of dto.tags) {
         const tag = await this.prisma.tag.upsert({
           where: { name: tagName.toLowerCase() },
@@ -354,6 +381,7 @@ export class LoopsService {
       throw new BadRequestException('You can only delete your own loops');
     }
 
+    // Delete files
     if (loop.originalFile && fs.existsSync(loop.originalFile)) {
       fs.unlinkSync(loop.originalFile);
     }
@@ -370,6 +398,7 @@ export class LoopsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Check if user already listened today
     const existingListen = await this.prisma.listen.findFirst({
       where: {
         userId,
@@ -381,6 +410,7 @@ export class LoopsService {
     });
 
     if (!existingListen) {
+      // Create new listen record
       await this.prisma.listen.create({
         data: {
           userId,
@@ -389,6 +419,7 @@ export class LoopsService {
         },
       });
 
+      // Increment listen count
       await this.prisma.loop.update({
         where: { id: loopId },
         data: { listenCount: { increment: 1 } },
@@ -401,7 +432,7 @@ export class LoopsService {
   }
 
   async getLoopsByBpm(bpm: number, excludeId?: string) {
-    const tolerance = 2;
+    const tolerance = 2; // Allow ±2 BPM
     
     const loops = await this.prisma.loop.findMany({
       where: {
