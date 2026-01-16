@@ -13,24 +13,34 @@ export interface MixLoop {
 }
 
 interface AudioState {
+  // Currently playing single loop (normal mode)
   currentlyPlayingId: string | null;
+  
+  // Mix mode - multiple loops playing together
   mixLoops: MixLoop[];
   mixBpm: number | null;
   isMixPlaying: boolean;
   mixAudioRefs: Map<string, HTMLAudioElement>;
-  mixVolumes: Map<string, number>;
-
+  
+  // Actions for single playback
   setCurrentlyPlaying: (id: string | null) => void;
   stopAll: () => void;
+  
+  // Actions for mix mode
   addToMix: (loop: MixLoop) => boolean;
   removeFromMix: (loopId: string) => void;
   clearMix: () => void;
   canAddToMix: (bpm: number) => boolean;
+  
+  // Mix playback control
   playMix: () => void;
   pauseMix: () => void;
   toggleMix: () => void;
   registerMixAudio: (loopId: string, audio: HTMLAudioElement) => void;
   unregisterMixAudio: (loopId: string) => void;
+  
+  // Mix volume control
+  mixVolumes: Map<string, number>;
   setMixVolume: (loopId: string, volume: number) => void;
 }
 
@@ -46,42 +56,52 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   setCurrentlyPlaying: (id) => {
     const state = get();
+    
+    // Stop mix if playing
     if (state.isMixPlaying) {
       state.pauseMix();
     }
+    
     set({ currentlyPlayingId: id });
   },
 
   stopAll: () => {
     const state = get();
+    
+    // Stop mix playback
     if (state.isMixPlaying) {
       state.pauseMix();
     }
+    
     set({ currentlyPlayingId: null });
   },
 
   addToMix: (loop) => {
     const state = get();
     
+    // Check max loops
     if (state.mixLoops.length >= MAX_MIX_LOOPS) {
       return false;
     }
     
+    // Check if already in mix
     if (state.mixLoops.some(l => l.id === loop.id)) {
       return false;
     }
     
+    // Check BPM compatibility
     if (state.mixBpm !== null && state.mixBpm !== loop.bpm) {
       return false;
     }
     
+    // Stop single playback when adding to mix
     if (state.currentlyPlayingId) {
       set({ currentlyPlayingId: null });
     }
     
     const newMixLoops = [...state.mixLoops, loop];
     const newVolumes = new Map(state.mixVolumes);
-    newVolumes.set(loop.id, 0.8);
+    newVolumes.set(loop.id, 0.8); // Default volume
     
     set({
       mixLoops: newMixLoops,
@@ -98,6 +118,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     const newVolumes = new Map(state.mixVolumes);
     newVolumes.delete(loopId);
     
+    // Unregister audio ref
     const audio = state.mixAudioRefs.get(loopId);
     if (audio) {
       audio.pause();
@@ -117,6 +138,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   clearMix: () => {
     const state = get();
+    
+    // Stop all audio
     state.mixAudioRefs.forEach((audio) => {
       audio.pause();
       audio.currentTime = 0;
@@ -133,21 +156,27 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   canAddToMix: (bpm) => {
     const state = get();
+    
     if (state.mixLoops.length >= MAX_MIX_LOOPS) {
       return false;
     }
+    
     if (state.mixBpm !== null && state.mixBpm !== bpm) {
       return false;
     }
+    
     return true;
   },
 
   playMix: () => {
     const state = get();
+    
+    // Stop single playback
     if (state.currentlyPlayingId) {
       set({ currentlyPlayingId: null });
     }
     
+    // Play all mix audios simultaneously
     const playPromises: Promise<void>[] = [];
     state.mixAudioRefs.forEach((audio, loopId) => {
       audio.currentTime = 0;
@@ -165,9 +194,11 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   pauseMix: () => {
     const state = get();
+    
     state.mixAudioRefs.forEach((audio) => {
       audio.pause();
     });
+    
     set({ isMixPlaying: false });
   },
 
@@ -199,6 +230,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     const newVolumes = new Map(state.mixVolumes);
     newVolumes.set(loopId, volume);
     
+    // Update audio element volume if exists
     const audio = state.mixAudioRefs.get(loopId);
     if (audio) {
       audio.volume = volume;
