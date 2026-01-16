@@ -27,6 +27,7 @@ export class NotificationsService {
       },
     });
 
+    // Send real-time notification
     this.notificationsGateway.sendToUser(userId, 'notification', notification);
 
     return notification;

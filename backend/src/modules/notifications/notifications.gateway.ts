@@ -60,10 +60,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
       client.user = user;
 
+      // Track user sockets
       const sockets = this.userSockets.get(user.id) || [];
       sockets.push(client.id);
       this.userSockets.set(user.id, sockets);
 
+      // Join personal room for notifications
       client.join(`user:${user.id}`);
 
       console.log(`User ${user.username} connected to notifications`);
