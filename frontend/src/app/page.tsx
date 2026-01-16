@@ -14,7 +14,7 @@ export default function HomePage() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold tracking-tight">
-                Trending This Week
+                🔥 Trending This Week
               </h2>
               <a href="/browse?sort=trending" className="text-sm text-primary hover:underline">
                 View all
@@ -35,7 +35,7 @@ export default function HomePage() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold tracking-tight">
-                Recently Added
+                ✨ Recently Added
               </h2>
               <a href="/browse?sort=newest" className="text-sm text-primary hover:underline">
                 View all
