@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
