@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuthStore } from "@/stores/auth-store";
-import { favoritesApi } from "@/lib/api";
-import { LoopCard } from "@/components/loops/loop-card";
-import { Button } from "@/components/ui/button";
-import { Loader2, Heart } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuthStore } from '@/stores/auth-store';
+import { favoritesApi } from '@/lib/api';
+import { LoopCard } from '@/components/loops/loop-card';
+import { Button } from '@/components/ui/button';
+import { Loader2, Heart, Music } from 'lucide-react';
 
 interface Loop {
   id: string;
@@ -38,7 +38,7 @@ export default function FavoritesPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace("/");
+      router.replace('/');
       return;
     }
     loadFavorites();
@@ -47,12 +47,15 @@ export default function FavoritesPage() {
   const loadFavorites = async () => {
     try {
       const response = await favoritesApi.getAll();
+      // Backend returns { data: loops[], meta: {...} }
       const loopsData = response.data.data || response.data;
+      // Filter out any undefined/null items
       const validLoops = Array.isArray(loopsData) 
         ? loopsData.filter((loop: any) => loop && loop.id)
         : [];
       setFavorites(validLoops);
     } catch (error) {
+      console.error('Failed to load favorites:', error);
       setFavorites([]);
     } finally {
       setLoading(false);
