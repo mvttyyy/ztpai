@@ -33,6 +33,7 @@ function MixLoopItem({ loop, isPlaying }: MixLoopItemProps) {
     registerMixAudio(loop.id, audio);
 
     const handleEnded = () => {
+      // Loop the audio when it ends
       audio.currentTime = 0;
       if (isMixPlaying) {
         audio.play();
@@ -47,6 +48,7 @@ function MixLoopItem({ loop, isPlaying }: MixLoopItemProps) {
     };
   }, [loop.id, registerMixAudio, unregisterMixAudio, isMixPlaying]);
 
+  // Sync playback state
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -102,6 +104,7 @@ export function MixerPanel() {
     clearMix,
   } = useAudioStore();
 
+  // Don't render if no loops in mix
   if (mixLoops.length === 0) {
     return null;
   }
@@ -113,6 +116,7 @@ export function MixerPanel() {
         isMinimized && 'w-auto'
       )}
     >
+      {/* Header */}
       <div 
         className="flex items-center gap-2 p-3 border-b border-border cursor-pointer"
         onClick={() => setIsMinimized(!isMinimized)}
@@ -138,8 +142,10 @@ export function MixerPanel() {
         </Button>
       </div>
 
+      {/* Content */}
       {!isMinimized && (
         <>
+          {/* Loop List */}
           <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
             {mixLoops.map((loop) => (
               <MixLoopItem 
@@ -150,6 +156,7 @@ export function MixerPanel() {
             ))}
           </div>
 
+          {/* Controls */}
           <div className="flex items-center gap-2 p-3 border-t border-border bg-muted/30">
             <Button
               variant={isMixPlaying ? 'default' : 'outline'}
