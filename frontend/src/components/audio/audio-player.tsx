@@ -9,7 +9,7 @@ import { useAudioStore } from '@/stores/audio-store';
 
 interface AudioPlayerProps {
   src: string;
-  loopId?: string;
+  loopId?: string; // Unique identifier for this audio
   waveformData?: number[];
   onPlay?: () => void;
   onPause?: () => void;
@@ -37,6 +37,7 @@ export function AudioPlayer({
   
   const { currentlyPlayingId, setCurrentlyPlaying, isMixPlaying, pauseMix } = useAudioStore();
 
+  // Draw waveform
   const drawWaveform = useCallback((progress: number) => {
     const canvas = canvasRef.current;
     if (!canvas || !waveformData || waveformData.length === 0) return;
@@ -47,6 +48,7 @@ export function AudioPlayer({
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     
+    // Only update canvas size if needed to avoid flickering
     const newWidth = rect.width * dpr;
     const newHeight = rect.height * dpr;
     if (canvas.width !== newWidth || canvas.height !== newHeight) {
@@ -54,7 +56,7 @@ export function AudioPlayer({
       canvas.height = newHeight;
     }
     
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
     ctx.scale(dpr, dpr);
 
     const width = rect.width;
@@ -62,11 +64,13 @@ export function AudioPlayer({
     const centerY = height / 2;
     const maxBarHeight = centerY * 0.85;
     
+    // Calculate how many bars we can fit based on width
     const minBarWidth = 2;
     const minGap = 1;
     const maxBars = Math.floor(width / (minBarWidth + minGap));
     const barCount = Math.min(waveformData.length, maxBars);
     
+    // Sample waveform data if we have more points than we can display
     const step = waveformData.length / barCount;
     const sampledData: number[] = [];
     for (let i = 0; i < barCount; i++) {
@@ -74,6 +78,7 @@ export function AudioPlayer({
       sampledData.push(waveformData[idx]);
     }
     
+    // Calculate bar dimensions to fit exactly in width
     const totalGapWidth = (barCount - 1) * minGap;
     const availableBarWidth = width - totalGapWidth;
     const barWidth = Math.max(minBarWidth, availableBarWidth / barCount);
@@ -81,11 +86,13 @@ export function AudioPlayer({
 
     ctx.clearRect(0, 0, width, height);
 
+    // Create gradient for played portion
     const playedGradient = ctx.createLinearGradient(0, 0, 0, height);
-    playedGradient.addColorStop(0, '#c084fc');
-    playedGradient.addColorStop(0.5, '#a855f7');
-    playedGradient.addColorStop(1, '#7c3aed');
+    playedGradient.addColorStop(0, '#c084fc');    // Light purple top
+    playedGradient.addColorStop(0.5, '#a855f7');  // Primary purple center
+    playedGradient.addColorStop(1, '#7c3aed');    // Darker purple bottom
 
+    // Create gradient for unplayed portion
     const unplayedGradient = ctx.createLinearGradient(0, 0, 0, height);
     unplayedGradient.addColorStop(0, 'rgba(148, 163, 184, 0.4)');
     unplayedGradient.addColorStop(0.5, 'rgba(100, 116, 139, 0.35)');
@@ -93,11 +100,12 @@ export function AudioPlayer({
 
     sampledData.forEach((value, index) => {
       const x = index * (barWidth + gap);
-      const normalizedValue = Math.max(0.08, value);
+      const normalizedValue = Math.max(0.08, value); // Minimum height for visibility
       const barHeight = normalizedValue * maxBarHeight;
-      const barProgress = (index + 0.5) / barCount;
+      const barProgress = (index + 0.5) / barCount; // Center of bar for more accurate progress
       const isPlayed = barProgress <= progress;
       
+      // Rounded rectangle helper
       const drawRoundedBar = (bx: number, by: number, bw: number, bh: number, radius: number) => {
         const r = Math.min(radius, bw / 2, bh / 2);
         ctx.beginPath();
@@ -114,17 +122,23 @@ export function AudioPlayer({
         ctx.fill();
       };
 
+      // Add subtle glow effect for played bars
       if (isPlayed && progress > 0) {
         ctx.shadowColor = '#a855f7';
         ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
       } else {
         ctx.shadowBlur = 0;
       }
 
       ctx.fillStyle = isPlayed ? playedGradient : unplayedGradient;
+
+      // Draw top bar (main waveform)
       drawRoundedBar(x, centerY - barHeight, barWidth, barHeight, 2);
       
-      ctx.shadowBlur = 0;
+      // Draw bottom reflection (smaller, with fade effect)
+      ctx.shadowBlur = 0; // No glow on reflection
       const reflectionHeight = barHeight * 0.5;
       const reflectionGradient = ctx.createLinearGradient(0, centerY, 0, centerY + reflectionHeight);
       if (isPlayed) {
@@ -138,14 +152,17 @@ export function AudioPlayer({
       drawRoundedBar(x, centerY + 2, barWidth, reflectionHeight, 2);
     });
 
+    // Reset shadow
     ctx.shadowBlur = 0;
   }, [waveformData]);
 
+  // Redraw waveform when time changes
   useEffect(() => {
     const progress = duration > 0 ? currentTime / duration : 0;
     drawWaveform(progress);
   }, [currentTime, duration, drawWaveform]);
 
+  // Handle window resize only
   useEffect(() => {
     const handleResize = () => {
       const progress = duration > 0 ? currentTime / duration : 0;
@@ -155,11 +172,12 @@ export function AudioPlayer({
     return () => window.removeEventListener('resize', handleResize);
   }, [duration, currentTime, drawWaveform]);
 
+  // Initial render when waveform data loads
   useEffect(() => {
     if (waveformData && waveformData.length > 0) {
       drawWaveform(0);
     }
-  }, [waveformData]);
+  }, [waveformData]); // Only run when waveformData changes, not on every render
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -196,10 +214,12 @@ export function AudioPlayer({
     };
   }, []);
 
+  // Listen for global playback changes - stop this player if another starts
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !loopId) return;
 
+    // If another loop is now playing, stop this one
     if (currentlyPlayingId && currentlyPlayingId !== loopId && isPlaying) {
       audio.pause();
       setIsPlaying(false);
@@ -207,6 +227,7 @@ export function AudioPlayer({
     }
   }, [currentlyPlayingId, loopId, isPlaying, onPause]);
 
+  // Stop single playback when mix starts
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -235,10 +256,12 @@ export function AudioPlayer({
       if (loopId) setCurrentlyPlaying(null);
       onPause?.();
     } else {
+      // Stop mix if playing
       if (isMixPlaying) {
         pauseMix();
       }
       
+      // Set this as the currently playing (will stop others via useEffect)
       if (loopId) {
         setCurrentlyPlaying(loopId);
       }
@@ -270,6 +293,7 @@ export function AudioPlayer({
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    // Clamp progress between 0 and 1
     const progress = Math.max(0, Math.min(1, x / rect.width));
     const newTime = progress * duration;
     
@@ -329,6 +353,7 @@ export function AudioPlayer({
     <div className={cn('bg-card rounded-lg p-4', className)}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
+      {/* Waveform or Progress bar */}
       <div className="mb-4">
         {waveformData && waveformData.length > 0 ? (
           <canvas
@@ -348,6 +373,7 @@ export function AudioPlayer({
         )}
       </div>
 
+      {/* Controls */}
       <div className="flex items-center gap-4">
         <Button
           variant="outline"
