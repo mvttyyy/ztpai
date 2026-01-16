@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Play, Download, Heart, Star, Music, Layers } from 'lucide-react';
+import { Play, Pause, Download, Heart, Star, Music, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +42,7 @@ interface LoopCardProps {
 }
 
 export function LoopCard({ loop, variant = 'default', onFavoriteChange }: LoopCardProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isFavorite, setIsFavorite] = useState(loop.isFavorite || false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const { isAuthenticated } = useAuthStore();
