@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: beatthat-postgres
     environment:
       POSTGRES_USER: beatthat
@@ -15,20 +15,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U beatthat"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 
   # RabbitMQ Message Broker
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.12-management-alpine
     container_name: beatthat-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: beatthat
       RABBITMQ_DEFAULT_PASS: beatthat_secret
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
     command: npm run start:dev
 
-  # Worker for audio processing
+  # Worker for audio processing (FFmpeg)
   worker:
     build:
       context: ./backend
@@ -84,6 +84,25 @@ services:
       rabbitmq:
         condition: service_healthy
     command: npm run worker
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: beatthat-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_WS_URL: ws://localhost:3001
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
 
 volumes:
   postgres_data:
