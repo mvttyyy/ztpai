@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth-store";
-import { adminApi } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth-store';
+import { adminApi } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -14,27 +14,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+} from '@/components/ui/tabs';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Users,
   Music,
@@ -47,8 +47,8 @@ import {
   Loader2,
   BarChart3,
   MessageSquare,
-} from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+} from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface DashboardStats {
   totalUsers: number;
@@ -64,7 +64,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: "USER" | "ADMIN";
+  role: 'USER' | 'ADMIN';
   isActive: boolean;
   createdAt: string;
   _count: {
@@ -75,7 +75,7 @@ interface User {
 interface Loop {
   id: string;
   title: string;
-  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
   createdAt: string;
   user: {
     username: string;
@@ -96,17 +96,17 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [usersPage, setUsersPage] = useState(1);
   const [loopsPage, setLoopsPage] = useState(1);
-  const [userSearch, setUserSearch] = useState("");
-  const [loopStatus, setLoopStatus] = useState<string>("all");
+  const [userSearch, setUserSearch] = useState('');
+  const [loopStatus, setLoopStatus] = useState<string>('all');
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || user?.role !== "ADMIN")) {
-      router.push("/");
+    if (!authLoading && (!isAuthenticated || user?.role !== 'ADMIN')) {
+      router.push('/');
     }
   }, [authLoading, isAuthenticated, user, router]);
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === "ADMIN") {
+    if (isAuthenticated && user?.role === 'ADMIN') {
       fetchDashboard();
       fetchUsers();
       fetchLoops();
@@ -117,7 +117,9 @@ export default function AdminPage() {
     try {
       const response = await adminApi.getDashboard();
       setStats(response.data);
-    } catch (error) {}
+    } catch (error) {
+      console.error('Failed to fetch dashboard:', error);
+    }
   };
 
   const fetchUsers = async () => {
@@ -128,7 +130,9 @@ export default function AdminPage() {
         search: userSearch || undefined,
       });
       setUsers(response.data.data);
-    } catch (error) {} finally {
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -139,22 +143,24 @@ export default function AdminPage() {
         page: loopsPage,
         limit: 10,
       };
-      if (loopStatus !== "all") {
+      if (loopStatus !== 'all') {
         params.status = loopStatus;
       }
       const response = await adminApi.getLoops(params);
       setLoops(response.data.data);
-    } catch (error) {}
+    } catch (error) {
+      console.error('Failed to fetch loops:', error);
+    }
   };
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === "ADMIN") {
+    if (isAuthenticated && user?.role === 'ADMIN') {
       fetchUsers();
     }
   }, [usersPage, userSearch]);
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === "ADMIN") {
+    if (isAuthenticated && user?.role === 'ADMIN') {
       fetchLoops();
     }
   }, [loopsPage, loopStatus]);
@@ -162,54 +168,54 @@ export default function AdminPage() {
   const handleUpdateRole = async (userId: string, role: string) => {
     try {
       await adminApi.updateUserRole(userId, role);
-      toast({ title: "Role updated successfully" });
+      toast({ title: 'Role updated successfully' });
       fetchUsers();
     } catch (error) {
-      toast({ title: "Failed to update role", variant: "destructive" });
+      toast({ title: 'Failed to update role', variant: 'destructive' });
     }
   };
 
   const handleToggleStatus = async (userId: string) => {
     try {
       await adminApi.toggleUserStatus(userId);
-      toast({ title: "User status toggled" });
+      toast({ title: 'User status toggled' });
       fetchUsers();
     } catch (error) {
-      toast({ title: "Failed to toggle status", variant: "destructive" });
+      toast({ title: 'Failed to toggle status', variant: 'destructive' });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
     try {
       await adminApi.deleteUser(userId);
-      toast({ title: "User deleted successfully" });
+      toast({ title: 'User deleted successfully' });
       fetchUsers();
       fetchDashboard();
     } catch (error) {
-      toast({ title: "Failed to delete user", variant: "destructive" });
+      toast({ title: 'Failed to delete user', variant: 'destructive' });
     }
   };
 
   const handleUpdateLoopStatus = async (loopId: string, status: string) => {
     try {
       await adminApi.updateLoopStatus(loopId, status);
-      toast({ title: "Loop status updated" });
+      toast({ title: 'Loop status updated' });
       fetchLoops();
     } catch (error) {
-      toast({ title: "Failed to update loop status", variant: "destructive" });
+      toast({ title: 'Failed to update loop status', variant: 'destructive' });
     }
   };
 
   const handleDeleteLoop = async (loopId: string) => {
-    if (!confirm("Are you sure you want to delete this loop?")) return;
+    if (!confirm('Are you sure you want to delete this loop?')) return;
     try {
       await adminApi.deleteLoop(loopId);
-      toast({ title: "Loop deleted successfully" });
+      toast({ title: 'Loop deleted successfully' });
       fetchLoops();
       fetchDashboard();
     } catch (error) {
-      toast({ title: "Failed to delete loop", variant: "destructive" });
+      toast({ title: 'Failed to delete loop', variant: 'destructive' });
     }
   };
 
@@ -221,7 +227,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "ADMIN") {
+  if (!isAuthenticated || user?.role !== 'ADMIN') {
     return null;
   }
 
@@ -346,8 +352,8 @@ export default function AdminPage() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={u.isActive ? "default" : "destructive"}>
-                          {u.isActive ? "Active" : "Inactive"}
+                        <Badge variant={u.isActive ? 'default' : 'destructive'}>
+                          {u.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
                       <TableCell>{u._count?.loops || 0}</TableCell>
@@ -358,7 +364,7 @@ export default function AdminPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleStatus(u.id)}
-                            title={u.isActive ? "Deactivate" : "Activate"}
+                            title={u.isActive ? 'Deactivate' : 'Activate'}
                           >
                             {u.isActive ? (
                               <ShieldOff className="h-4 w-4" />
@@ -496,4 +502,3 @@ export default function AdminPage() {
     </main>
   );
 }
-```  , 
