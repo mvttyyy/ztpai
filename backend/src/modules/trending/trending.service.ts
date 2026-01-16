@@ -7,9 +7,12 @@ export class TrendingService {
   constructor(private prisma: PrismaService) {}
 
   async getTrending(limit = 10) {
+    // Get trending loops from last 7 days
+    // Score = downloads * 2 + unique listens
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Get download counts per loop in last 7 days
     const downloadCounts = await this.prisma.download.groupBy({
       by: ['loopId'],
       where: {
@@ -18,6 +21,7 @@ export class TrendingService {
       _count: { id: true },
     });
 
+    // Get unique listen counts per loop in last 7 days
     const listenCounts = await this.prisma.listen.groupBy({
       by: ['loopId'],
       where: {
@@ -26,6 +30,7 @@ export class TrendingService {
       _count: { id: true },
     });
 
+    // Calculate scores
     const scores = new Map<string, number>();
 
     downloadCounts.forEach(d => {
@@ -36,12 +41,14 @@ export class TrendingService {
       scores.set(l.loopId, (scores.get(l.loopId) || 0) + l._count.id);
     });
 
+    // Sort by score
     const sortedLoopIds = Array.from(scores.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
       .map(([loopId]) => loopId);
 
     if (sortedLoopIds.length === 0) {
+      // Fall back to most downloaded overall
       const loops = await this.prisma.loop.findMany({
         where: { status: LoopStatus.READY },
         orderBy: { downloadCount: 'desc' },
@@ -67,6 +74,7 @@ export class TrendingService {
       }));
     }
 
+    // Get loop details
     const loops = await this.prisma.loop.findMany({
       where: {
         id: { in: sortedLoopIds },
@@ -86,6 +94,7 @@ export class TrendingService {
       },
     });
 
+    // Sort loops by their score and add score to response
     return sortedLoopIds
       .map(id => loops.find(l => l.id === id))
       .filter(Boolean)
@@ -125,7 +134,7 @@ export class TrendingService {
     const loops = await this.prisma.loop.findMany({
       where: {
         status: LoopStatus.READY,
-        ratingCount: { gte: 3 },
+        ratingCount: { gte: 3 }, // At least 3 ratings
       },
       orderBy: { averageRating: 'desc' },
       take: limit,

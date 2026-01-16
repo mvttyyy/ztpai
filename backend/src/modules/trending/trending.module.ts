@@ -5,5 +5,6 @@ import { TrendingService } from './trending.service';
 @Module({
   controllers: [TrendingController],
   providers: [TrendingService],
+  exports: [TrendingService],
 })
 export class TrendingModule {}
