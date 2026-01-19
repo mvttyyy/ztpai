@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
-import { loopsApi } from '@/lib/api';
+import { loopsApi, tagsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,7 +43,7 @@ const KEYS = [
   'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm',
 ];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ACCEPTED_TYPES = [
   'audio/mpeg',
   'audio/mp3',
@@ -76,8 +76,10 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [availableTags, setAvailableTags] = useState<{ id: string; name: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Redirect if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
@@ -113,6 +115,7 @@ export default function UploadPage() {
         return;
       }
       setFile(droppedFile);
+      // Auto-fill title from filename
       if (!formData.title) {
         const nameWithoutExt = droppedFile.name.replace(/\.[^/.]+$/, '');
         setFormData({ ...formData, title: nameWithoutExt });
@@ -179,6 +182,7 @@ export default function UploadPage() {
       if (formData.genre) uploadFormData.append('genre', formData.genre);
       if (tags.length > 0) uploadFormData.append('tags', JSON.stringify(tags));
 
+      // Simulate progress for now (axios onUploadProgress would be better)
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
@@ -193,6 +197,7 @@ export default function UploadPage() {
         description: 'Your loop is being processed and will be available soon.',
       });
 
+      // Redirect to user's loops
       setTimeout(() => {
         router.push(`/profile/${user?.username}`);
       }, 1500);
@@ -201,6 +206,7 @@ export default function UploadPage() {
       
       if (error.response?.data?.message) {
         const message = error.response.data.message;
+        // Handle array of validation errors
         if (Array.isArray(message)) {
           errorMessage = message.join('. ');
         } else {
