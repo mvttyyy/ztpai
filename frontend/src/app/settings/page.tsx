@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth-store";
-import { usersApi } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Settings, Save, Upload, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth-store';
+import { usersApi } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Loader2, Settings, Save, Upload, X } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -20,42 +20,42 @@ export default function SettingsPage() {
   
   const [loading, setLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [formData, setFormData] = useState({
-    username: "",
-    bio: "",
+    username: '',
+    bio: '',
   });
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace("/");
+      router.replace('/');
       return;
     }
     if (user) {
       setFormData({
-        username: user.username || "",
-        bio: user.bio || "",
+        username: user.username || '',
+        bio: user.bio || '',
       });
-      setAvatarPreview(user.avatarUrl || "");
+      setAvatarPreview(user.avatarUrl || '');
     }
   }, [isAuthenticated, user, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
+      if (!file.type.startsWith('image/')) {
         toast({
-          title: "Invalid file",
-          description: "Please select an image file",
-          variant: "destructive",
+          title: 'Invalid file',
+          description: 'Please select an image file',
+          variant: 'destructive',
         });
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
         toast({
-          title: "File too large",
-          description: "Avatar must be less than 5MB",
-          variant: "destructive",
+          title: 'File too large',
+          description: 'Avatar must be less than 5MB',
+          variant: 'destructive',
         });
         return;
       }
@@ -71,9 +71,9 @@ export default function SettingsPage() {
 
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
-    setAvatarPreview("");
+    setAvatarPreview('');
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
@@ -90,7 +90,7 @@ export default function SettingsPage() {
       
       // If avatar was removed, set to empty
       if (!avatarPreview && user?.avatarUrl) {
-        updateData.avatarUrl = "";
+        updateData.avatarUrl = '';
       }
       
       // If a new file was selected, convert to base64 for storage
@@ -102,19 +102,19 @@ export default function SettingsPage() {
       const response = await usersApi.updateMe(updateData);
       setUser(response.data);
       toast({
-        title: "Settings saved",
-        description: "Your profile has been updated successfully.",
+        title: 'Settings saved',
+        description: 'Your profile has been updated successfully.',
       });
     } catch (error: any) {
-      let errorMessage = "Failed to save settings";
+      let errorMessage = 'Failed to save settings';
       if (error.response?.data?.message) {
         const msg = error.response.data.message;
-        errorMessage = Array.isArray(msg) ? msg.join(". ") : msg;
+        errorMessage = Array.isArray(msg) ? msg.join('. ') : msg;
       }
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -146,7 +146,7 @@ export default function SettingsPage() {
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview} />
                 <AvatarFallback className="text-2xl">
-                  {formData.username?.[0]?.toUpperCase() || "U"}
+                  {formData.username?.[0]?.toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
@@ -203,7 +203,7 @@ export default function SettingsPage() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              value={user?.email || ""}
+              value={user?.email || ''}
               disabled
               className="bg-muted"
             />
