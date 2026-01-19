@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, memo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loopsApi, ratingsApi, commentsApi, favoritesApi, downloadsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -20,6 +20,7 @@ import {
   Calendar,
   Music,
   Share2,
+  Flag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +60,7 @@ interface Comment {
   };
 }
 
+// Memoized Rating Section to prevent re-renders during audio playback
 const RatingSection = memo(function RatingSection({
   userRating,
   onRate,
@@ -102,8 +104,9 @@ const RatingSection = memo(function RatingSection({
 
 export default function LoopDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const loopId = params.id as string;
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { toast } = useToast();
 
   const [loop, setLoop] = useState<Loop | null>(null);
@@ -127,6 +130,7 @@ export default function LoopDetailPage() {
       const response = await loopsApi.getById(loopId);
       setLoop(response.data);
 
+      // Check if user has rated/favorited
       if (isAuthenticated) {
         try {
           const ratingRes = await ratingsApi.getUserRating(loopId);
@@ -134,6 +138,7 @@ export default function LoopDetailPage() {
             setUserRating(ratingRes.data.value);
           }
         } catch (e) {
+          // No rating exists, that's fine
           console.log('No existing rating');
         }
 
@@ -152,6 +157,7 @@ export default function LoopDetailPage() {
   const loadComments = async () => {
     try {
       const response = await commentsApi.getForLoop(loopId);
+      // Backend returns { data: comments, meta: {...} } so extract .data
       const commentsData = response.data.data || response.data;
       setComments(commentsData);
     } catch (err) {
@@ -169,17 +175,20 @@ export default function LoopDetailPage() {
       return;
     }
 
+    // Optimistically update user rating
     const previousRating = userRating;
     setUserRating(value);
 
     try {
       await ratingsApi.rate(loopId, value);
+      // Update average rating locally without full reload
       if (loop) {
         const response = await loopsApi.getById(loopId);
         setLoop(prev => prev ? { ...prev, averageRating: response.data.averageRating } : prev);
       }
       toast({ title: 'Rating saved!' });
     } catch (error: any) {
+      // Revert on error
       setUserRating(previousRating);
       toast({
         title: 'Error',
@@ -233,11 +242,13 @@ export default function LoopDetailPage() {
       const response = await downloadsApi.download(loopId);
       const { fileUrl, fileName, certificate } = response.data;
       
+      // Fetch the file as blob to force download instead of opening in browser
       const fileResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${fileUrl}`
       );
       const blob = await fileResponse.blob();
       
+      // Create object URL and trigger download
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -246,6 +257,7 @@ export default function LoopDetailPage() {
       link.click();
       document.body.removeChild(link);
       
+      // Clean up the blob URL
       window.URL.revokeObjectURL(blobUrl);
 
       toast({
@@ -253,7 +265,7 @@ export default function LoopDetailPage() {
         description: `Certificate: ${certificate.certificateHash.slice(0, 16)}...`,
       });
 
-      loadLoop();
+      loadLoop(); // Refresh download count
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || error.message || 'Please try again';
       toast({
@@ -336,6 +348,7 @@ export default function LoopDetailPage() {
       {/* Header */}
       <div className="bg-card rounded-xl border p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-6">
+          {/* Waveform/Player */}
           <div className="flex-1">
             {previewUrl ? (
               <AudioPlayer
@@ -351,6 +364,7 @@ export default function LoopDetailPage() {
           </div>
         </div>
 
+        {/* Title & Info */}
         <div className="mt-6">
           <h1 className="text-2xl font-bold mb-2">{loop.title}</h1>
           
@@ -371,6 +385,7 @@ export default function LoopDetailPage() {
             <p className="text-muted-foreground mt-4">{loop.description}</p>
           )}
 
+          {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-4 mt-4 text-sm">
             <span className="font-semibold">{loop.bpm} BPM</span>
             {loop.key && <span>{loop.key}</span>}
@@ -381,6 +396,7 @@ export default function LoopDetailPage() {
             </span>
           </div>
 
+          {/* Tags */}
           {loop.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
               {loop.tags.map((tag) => (
@@ -394,6 +410,7 @@ export default function LoopDetailPage() {
           )}
         </div>
 
+        {/* Stats & Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6 pt-6 border-t">
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
@@ -433,11 +450,14 @@ export default function LoopDetailPage() {
         </div>
       </div>
 
+      {/* Rating Section */}
       <RatingSection userRating={userRating} onRate={handleRate} />
 
+      {/* Comments Section */}
       <div className="bg-card rounded-xl border p-6">
         <h2 className="font-semibold mb-4">Comments ({comments.length})</h2>
 
+        {/* New Comment Form */}
         {isAuthenticated ? (
           <form onSubmit={handleSubmitComment} className="mb-6">
             <Textarea
@@ -461,6 +481,7 @@ export default function LoopDetailPage() {
           </p>
         )}
 
+        {/* Comments List */}
         {comments.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
             No comments yet. Be the first to comment!
