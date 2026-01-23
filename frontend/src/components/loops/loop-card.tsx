@@ -100,6 +100,7 @@ export function LoopCard({ loop, variant = 'default', onFavoriteChange }: LoopCa
       slug: loop.slug,
       title: loop.title,
       bpm: loop.bpm,
+      duration: loop.duration,
       previewUrl,
       waveformData: loop.waveformData,
       user: { username: loop.user.username },
@@ -150,6 +151,9 @@ export function LoopCard({ loop, variant = 'default', onFavoriteChange }: LoopCa
   };
 
   const handlePlay = async () => {
+    // Only record listens for authenticated users to avoid 401 errors
+    if (!isAuthenticated) return;
+    
     try {
       await loopsApi.recordListen(loop.id);
     } catch (error) {

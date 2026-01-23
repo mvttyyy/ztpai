@@ -5,6 +5,7 @@ export interface MixLoop {
   slug: string;
   title: string;
   bpm: number;
+  duration: number;
   previewUrl: string;
   waveformData?: number[];
   user: {
@@ -21,6 +22,7 @@ interface AudioState {
   mixBpm: number | null;
   isMixPlaying: boolean;
   mixAudioRefs: Map<string, HTMLAudioElement>;
+  mixLoopTimerId: NodeJS.Timeout | null;
   
   // Actions for single playback
   setCurrentlyPlaying: (id: string | null) => void;
@@ -53,6 +55,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   isMixPlaying: false,
   mixAudioRefs: new Map(),
   mixVolumes: new Map(),
+  mixLoopTimerId: null,
 
   setCurrentlyPlaying: (id) => {
     const state = get();
@@ -145,12 +148,18 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       audio.currentTime = 0;
     });
     
+    // Clear loop timer
+    if (state.mixLoopTimerId) {
+      clearTimeout(state.mixLoopTimerId);
+    }
+    
     set({
       mixLoops: [],
       mixBpm: null,
       isMixPlaying: false,
       mixAudioRefs: new Map(),
       mixVolumes: new Map(),
+      mixLoopTimerId: null,
     });
   },
 
@@ -176,30 +185,61 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       set({ currentlyPlayingId: null });
     }
     
+    // Clear previous timer
+    if (state.mixLoopTimerId) {
+      clearTimeout(state.mixLoopTimerId);
+    }
+    
+    // Find the longest loop duration
+    const maxDuration = Math.max(...state.mixLoops.map(loop => loop.duration));
+    
     // Play all mix audios simultaneously
     const playPromises: Promise<void>[] = [];
     state.mixAudioRefs.forEach((audio, loopId) => {
       audio.currentTime = 0;
+      audio.loop = false; // Disable individual looping
       const volume = state.mixVolumes.get(loopId) ?? 0.8;
       audio.volume = volume;
       playPromises.push(audio.play());
     });
     
+    // Set up timer to restart all loops when the longest one ends
+    const timerId = setTimeout(() => {
+      const currentState = get();
+      if (currentState.isMixPlaying) {
+        // Restart all loops from beginning
+        currentState.mixAudioRefs.forEach((audio, loopId) => {
+          audio.currentTime = 0;
+          const volume = currentState.mixVolumes.get(loopId) ?? 0.8;
+          audio.volume = volume;
+          audio.play().catch(console.error);
+        });
+        // Recursively set next timer
+        get().playMix();
+      }
+    }, maxDuration * 1000);
+    
     Promise.all(playPromises).then(() => {
-      set({ isMixPlaying: true });
+      set({ isMixPlaying: true, mixLoopTimerId: timerId });
     }).catch((error) => {
       console.error('Failed to play mix:', error);
+      clearTimeout(timerId);
     });
   },
 
   pauseMix: () => {
     const state = get();
     
+    // Clear the loop timer
+    if (state.mixLoopTimerId) {
+      clearTimeout(state.mixLoopTimerId);
+    }
+    
     state.mixAudioRefs.forEach((audio) => {
       audio.pause();
     });
     
-    set({ isMixPlaying: false });
+    set({ isMixPlaying: false, mixLoopTimerId: null });
   },
 
   toggleMix: () => {

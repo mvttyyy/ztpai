@@ -32,21 +32,10 @@ function MixLoopItem({ loop, isPlaying }: MixLoopItemProps) {
 
     registerMixAudio(loop.id, audio);
 
-    const handleEnded = () => {
-      // Loop the audio when it ends
-      audio.currentTime = 0;
-      if (isMixPlaying) {
-        audio.play();
-      }
-    };
-
-    audio.addEventListener('ended', handleEnded);
-
     return () => {
-      audio.removeEventListener('ended', handleEnded);
       unregisterMixAudio(loop.id);
     };
-  }, [loop.id, registerMixAudio, unregisterMixAudio, isMixPlaying]);
+  }, [loop.id, registerMixAudio, unregisterMixAudio]);
 
   // Sync playback state
   useEffect(() => {
@@ -62,7 +51,7 @@ function MixLoopItem({ loop, isPlaying }: MixLoopItemProps) {
 
   return (
     <div className="flex items-center gap-3 p-2 bg-background/50 rounded-lg group">
-      <audio ref={audioRef} src={loop.previewUrl} preload="metadata" loop />
+      <audio ref={audioRef} src={loop.previewUrl} preload="metadata" />
       
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{loop.title}</p>
