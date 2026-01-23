@@ -105,6 +105,8 @@ export default function SettingsPage() {
         title: 'Settings saved',
         description: 'Your profile has been updated successfully.',
       });
+      // Redirect to the user's profile page
+      router.push(`/profile/${response.data.username}`);
     } catch (error: any) {
       let errorMessage = 'Failed to save settings';
       if (error.response?.data?.message) {
