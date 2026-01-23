@@ -179,10 +179,19 @@ export class LoopsService {
         // Search by BPM (exact match)
         where.bpm = numericSearch;
       } else {
-        // Text search in title and description
+        // Text search in title, description, and tags
         where.OR = [
           { title: { contains: search, mode: 'insensitive' } },
           { description: { contains: search, mode: 'insensitive' } },
+          { 
+            tags: { 
+              some: { 
+                tag: { 
+                  name: { contains: search.toLowerCase(), mode: 'insensitive' } 
+                } 
+              } 
+            } 
+          },
         ];
       }
     }
