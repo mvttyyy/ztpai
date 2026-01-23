@@ -51,6 +51,7 @@ Aplikacja full-stack do udostepniania, podgladu i pobierania darmowych loopow i 
 
 ## Diagram relacji encji (ERD)
 
+<img width="1346" height="1632" alt="Untitled (3)" src="https://github.com/user-attachments/assets/8a29843d-9f87-4503-913e-d342cc9fd439" />
 
 
 ## Struktura projektu
@@ -126,7 +127,7 @@ BeatThat/
 6. **Dostep do aplikacji**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:3001
-   - Dokumentacja API: http://localhost:3001/api
+   - Dokumentacja API: http://localhost:3001/api/docs
    - Panel RabbitMQ: http://localhost:15672
 
 ### Lokalny development
