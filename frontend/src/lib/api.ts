@@ -34,6 +34,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      // Skip token refresh for auth endpoints (login, register, refresh)
+      const isAuthEndpoint = originalRequest.url?.includes('/auth/');
+      if (isAuthEndpoint) {
+        return Promise.reject(error);
+      }
+
+      // Only try to refresh if we have a token (user was logged in)
+      const hasToken = typeof window !== 'undefined' && localStorage.getItem('accessToken');
+      if (!hasToken) {
+        // No token means user is not logged in, just reject without redirect
+        return Promise.reject(error);
+      }
+
       try {
         const response = await api.post('/auth/refresh');
         const { accessToken } = response.data;
