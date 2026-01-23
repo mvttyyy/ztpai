@@ -1,134 +1,135 @@
-# BeatThat 🎵
+# BeatThat
 
-A full-stack web application for sharing, previewing, and downloading free audio loops and samples. Built with modern technologies including NestJS, Next.js, PostgreSQL, and RabbitMQ.
+Aplikacja full-stack do udostepniania, podgladu i pobierania darmowych loopow i sampli audio. Zbudowana z wykorzystaniem nowoczesnych technologii: NestJS, Next.js, PostgreSQL i RabbitMQ.
 
-![BeatThat](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+## Funkcjonalnosci
 
-## Features
+### Funkcje glowne
+- **Podglad audio** - Streaming i podglad loopow z wizualizacja fali dzwiekowej
+- **Darmowe pobieranie** - Wszystkie loopy sa darmowe, bez wymaganej atrybucji
+- **Certyfikowane pobrania** - Weryfikacja autentycznosci przez hash SHA-256
+- **System trendow** - Analityka 7-dniowa (pobrania + unikalne odsluchania)
+- **Odtwarzanie wielu loopow** - Jednoczesne odtwarzanie wielu loopow o tym samym BPM
 
-### Core Features
-- 🎧 **Audio Preview** - Stream and preview loops with waveform visualization
-- 📥 **Free Downloads** - All loops are free to use with no attribution required
-- 🔐 **Certified Downloads** - SHA-256 hash verification for authenticity
-- 📈 **Trending System** - 7-day rolling analytics (downloads + unique listens)
-- 🎚️ **Multi-loop Playback** - Play multiple loops at the same BPM simultaneously
+### Funkcje uzytkownika
+- Rejestracja i uwierzytelnianie (JWT + refresh tokens)
+- Upload loopow z metadanymi (BPM, tonacja, gatunek, tagi)
+- Ocenianie loopow (1-5 gwiazdek)
+- Komentowanie loopow
+- Dodawanie do ulubionych
+- Powiadomienia w czasie rzeczywistym (WebSocket)
+- Prywatne wiadomosci miedzy uzytkownikami
 
-### User Features
-- 👤 User registration and authentication (JWT + refresh tokens)
-- ⬆️ Upload loops with metadata (BPM, key, genre, tags)
-- ⭐ Rate loops (1-5 stars)
-- 💬 Comment on loops
-- ❤️ Favorite loops for later
-- 🔔 Real-time notifications (WebSocket)
-- 💭 Private messaging between users
+### Funkcje administratora
+- Dashboard ze statystykami platformy
+- Zarzadzanie uzytkownikami
+- Moderacja loopow
+- Logowanie zdarzen
 
-### Admin Features
-- 📊 Dashboard with platform statistics
-- 👥 User management
-- 🎵 Loop moderation
-- 📝 Audit logging
-
-## Tech Stack
+## Stos technologiczny
 
 ### Backend
 - **Framework**: NestJS (Node.js)
-- **Database**: PostgreSQL with Prisma ORM
-- **Queue**: RabbitMQ for async audio processing
-- **Auth**: JWT with refresh tokens (HttpOnly cookies)
-- **Real-time**: Socket.io for WebSocket connections
-- **Audio Processing**: FFmpeg (MP3/OGG transcoding, waveform generation)
-- **Documentation**: Swagger/OpenAPI
+- **Baza danych**: PostgreSQL z Prisma ORM
+- **Kolejka**: RabbitMQ do asynchronicznego przetwarzania audio
+- **Autoryzacja**: JWT z refresh tokenami (ciasteczka HttpOnly)
+- **Czas rzeczywisty**: Socket.io do polaczen WebSocket
+- **Przetwarzanie audio**: FFmpeg (transkodowanie MP3/OGG, generowanie fali)
+- **Dokumentacja**: Swagger/OpenAPI
 
 ### Frontend
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS
-- **Components**: Radix UI primitives
-- **State Management**: Zustand
-- **Audio**: Custom audio player with waveform visualization
-- **HTTP Client**: Axios
+- **Framework**: Next.js 14 z App Router
+- **Stylowanie**: Tailwind CSS
+- **Komponenty**: Radix UI
+- **Zarzadzanie stanem**: Zustand
+- **Audio**: Wlasny odtwarzacz z wizualizacja fali
+- **Klient HTTP**: Axios
 
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Services**: PostgreSQL, RabbitMQ, Backend API, Worker, Frontend
+### Infrastruktura
+- **Konteneryzacja**: Docker i Docker Compose
+- **Uslugi**: PostgreSQL, RabbitMQ, Backend API, Worker, Frontend
 
-## Project Structure
+## Diagram relacji encji (ERD)
+
+
+
+## Struktura projektu
 
 ```
 BeatThat/
-├── docker-compose.yml          # Docker orchestration
+├── docker-compose.yml          # Orkiestracja Docker
 ├── backend/
 │   ├── src/
 │   │   ├── modules/
-│   │   │   ├── auth/           # Authentication & authorization
-│   │   │   ├── users/          # User management
-│   │   │   ├── loops/          # Loop CRUD operations
-│   │   │   ├── tags/           # Tag management
-│   │   │   ├── ratings/        # Rating system
-│   │   │   ├── comments/       # Comments
-│   │   │   ├── favorites/      # User favorites
-│   │   │   ├── downloads/      # Download tracking
-│   │   │   ├── trending/       # Trending algorithm
-│   │   │   ├── chat/           # Private messaging
-│   │   │   └── notifications/  # Real-time notifications
-│   │   ├── prisma/             # Database service
-│   │   └── rabbitmq/           # Message queue service
+│   │   │   ├── auth/           # Uwierzytelnianie i autoryzacja
+│   │   │   ├── users/          # Zarzadzanie uzytkownikami
+│   │   │   ├── loops/          # Operacje CRUD na loopach
+│   │   │   ├── tags/           # Zarzadzanie tagami
+│   │   │   ├── ratings/        # System ocen
+│   │   │   ├── comments/       # Komentarze
+│   │   │   ├── favorites/      # Ulubione uzytkownika
+│   │   │   ├── downloads/      # Sledzenie pobran
+│   │   │   ├── trending/       # Algorytm trendow
+│   │   │   ├── chat/           # Prywatne wiadomosci
+│   │   │   └── notifications/  # Powiadomienia real-time
+│   │   ├── prisma/             # Serwis bazy danych
+│   │   └── rabbitmq/           # Serwis kolejki wiadomosci
 │   ├── prisma/
-│   │   ├── schema.prisma       # Database schema
-│   │   └── seed.ts             # Database seeding
-│   └── worker/                 # Audio processing worker
+│   │   ├── schema.prisma       # Schemat bazy danych
+│   │   └── seed.ts             # Seedowanie bazy
+│   └── worker/                 # Worker przetwarzania audio
 └── frontend/
     ├── src/
-    │   ├── app/                # Next.js pages
-    │   ├── components/         # React components
-    │   ├── lib/                # Utilities & API client
-    │   └── stores/             # Zustand stores
-    └── public/                 # Static assets
+    │   ├── app/                # Strony Next.js
+    │   ├── components/         # Komponenty React
+    │   ├── lib/                # Narzedzia i klient API
+    │   └── stores/             # Store'y Zustand
+    └── public/                 # Zasoby statyczne
 ```
 
-## Getting Started
+## Pierwsze kroki
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for local development)
-- FFmpeg (for audio processing)
+### Wymagania
+- Docker i Docker Compose
+- Node.js 18+ (do lokalnego developmentu)
+- FFmpeg (do przetwarzania audio)
 
-### Quick Start with Docker
+### Szybki start z Docker
 
-1. **Clone the repository**
+1. **Sklonuj repozytorium**
    ```bash
    git clone https://github.com/yourusername/beatthat.git
    cd beatthat/BeatThat
    ```
 
-2. **Create environment file**
+2. **Utworz plik srodowiskowy**
    ```bash
-   # Backend environment
+   # Srodowisko backend
    cp backend/.env.example backend/.env
    ```
 
-3. **Start all services**
+3. **Uruchom wszystkie uslugi**
    ```bash
    docker-compose up -d
    ```
 
-4. **Run database migrations**
+4. **Wykonaj migracje bazy danych**
    ```bash
    docker-compose exec backend npx prisma migrate deploy
    ```
 
-5. **Seed the database** (optional)
+5. **Wypelnij baze danymi** (opcjonalne)
    ```bash
    docker-compose exec backend npx prisma db seed
    ```
 
-6. **Access the application**
+6. **Dostep do aplikacji**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:3001
-   - API Docs: http://localhost:3001/api
-   - RabbitMQ Management: http://localhost:15672
+   - Dokumentacja API: http://localhost:3001/api
+   - Panel RabbitMQ: http://localhost:15672
 
-### Local Development
+### Lokalny development
 
 #### Backend
 ```bash
@@ -150,21 +151,21 @@ cd backend
 npm run worker:dev
 ```
 
-## Environment Variables
+## Zmienne srodowiskowe
 
 ### Backend (.env)
 ```env
-# Database
+# Baza danych
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/beatthat?schema=public"
 
 # JWT
-JWT_SECRET="your-super-secret-jwt-key"
-JWT_REFRESH_SECRET="your-refresh-token-secret"
+JWT_SECRET="twoj-super-tajny-klucz-jwt"
+JWT_REFRESH_SECRET="twoj-tajny-klucz-refresh-token"
 
 # RabbitMQ
 RABBITMQ_URL="amqp://guest:guest@localhost:5672"
 
-# App
+# Aplikacja
 PORT=3001
 UPLOAD_DIR="./uploads"
 ```
@@ -174,75 +175,55 @@ UPLOAD_DIR="./uploads"
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-## API Documentation
+## Dokumentacja API
 
-The API is documented using Swagger/OpenAPI. Once the backend is running, access the documentation at:
+API jest udokumentowane przy uzyciu Swagger/OpenAPI. Po uruchomieniu backendu, dokumentacja dostepna jest pod adresem:
 
 - **Swagger UI**: http://localhost:3001/api
 - **OpenAPI JSON**: http://localhost:3001/api-json
 
-### Key Endpoints
+### Glowne endpointy
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register new user |
-| POST | `/auth/login` | Login and get tokens |
-| POST | `/auth/refresh` | Refresh access token |
-| GET | `/loops` | List loops (with filters) |
-| POST | `/loops` | Upload new loop |
-| GET | `/loops/:id` | Get loop details |
-| POST | `/ratings/:loopId` | Rate a loop |
-| GET | `/trending` | Get trending loops |
-| GET | `/tags/popular` | Get popular tags |
+| Metoda | Endpoint | Opis |
+|--------|----------|------|
+| POST | `/auth/register` | Rejestracja nowego uzytkownika |
+| POST | `/auth/login` | Logowanie i pobranie tokenow |
+| POST | `/auth/refresh` | Odswiezenie access tokena |
+| GET | `/loops` | Lista loopow (z filtrami) |
+| POST | `/loops` | Upload nowego loopa |
+| GET | `/loops/:id` | Szczegoly loopa |
+| POST | `/ratings/:loopId` | Ocen loop |
+| GET | `/trending` | Pobierz popularne loopy |
+| GET | `/tags/popular` | Pobierz popularne tagi |
 
-## Database Schema
+## Schemat bazy danych
 
-The database follows 3NF normalization with the following main entities:
+Baza danych jest znormalizowana do 3NF i zawiera nastepujace glowne encje:
 
-- **User** - Platform users with roles (USER, ADMIN)
-- **Loop** - Audio loops with metadata
-- **Tag** - Categorization tags (many-to-many with Loop)
-- **Rating** - User ratings for loops
-- **Comment** - User comments on loops
-- **Favorite** - User favorite loops
-- **Download** - Download records with certification
-- **Listen** - Unique listen tracking
-- **ChatMessage** - Private messages between users
-- **Notification** - User notifications
+- **User** - Uzytkownicy platformy z rolami (USER, ADMIN)
+- **Loop** - Loopy audio z metadanymi
+- **Tag** - Tagi kategoryzacji (relacja many-to-many z Loop)
+- **Rating** - Oceny uzytkownikow dla loopow
+- **Comment** - Komentarze uzytkownikow do loopow
+- **Favorite** - Ulubione loopy uzytkownika
+- **Download** - Rekordy pobran z certyfikacja
+- **Listen** - Sledzenie unikalnych odsluchain
+- **ChatMessage** - Prywatne wiadomosci miedzy uzytkownikami
+- **Notification** - Powiadomienia uzytkownika
 
-## Audio Processing
+## Przetwarzanie audio
 
-The worker service handles:
+Serwis worker obsluguje:
 
-1. **Transcoding** - Convert uploads to MP3/OGG preview files (128 kbps)
-2. **Waveform Generation** - Extract amplitude data for visualization
-3. **Hash Calculation** - SHA-256 for download certification
+1. **Transkodowanie** - Konwersja uploadow do plikow podgladu MP3/OGG (128 kbps)
+2. **Generowanie fali** - Ekstrakcja danych amplitudy do wizualizacji
+3. **Obliczanie hashu** - SHA-256 do certyfikacji pobran
 
-## Trending Algorithm
+## Algorytm trendow
 
-Loops are ranked by a weighted score calculated over a 7-day window:
+Loopy sa rankowane wedlug wazonego wyniku obliczanego w oknie 7-dniowym:
 
 ```
-score = (downloads × 2) + unique_listens
+wynik = (pobrania × 2) + unikalne_odsluchania
 ```
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [NestJS](https://nestjs.com/) - A progressive Node.js framework
-- [Next.js](https://nextjs.org/) - The React Framework
-- [Prisma](https://www.prisma.io/) - Next-generation ORM
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible components
-- [FFmpeg](https://ffmpeg.org/) - Audio processing
