@@ -13,9 +13,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth-store';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
+import { io, Socket } from 'socket.io-client';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -24,6 +26,62 @@ export function Navbar() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Fetch initial unread count and setup WebSocket for real-time updates
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    // Fetch initial unread count
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await api.get('/notifications?read=false&limit=1');
+        setUnreadCount(response.data.total || 0);
+      } catch (error) {
+        console.error('Failed to fetch notifications count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Setup WebSocket connection for real-time notifications
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+    socketRef.current = io(wsUrl, {
+      transports: ['websocket'],
+      query: { userId: user.id },
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('WebSocket connected for notifications');
+    });
+
+    socketRef.current.on('notification', () => {
+      // Increment unread count when new notification arrives
+      setUnreadCount(prev => prev + 1);
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('WebSocket disconnected');
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [isAuthenticated, user]);
+
+  // Reset unread count when visiting notifications page
+  useEffect(() => {
+    if (pathname === '/notifications') {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
 
   const navLinks = [
     { href: '/browse', label: 'Browse', icon: Search },
@@ -97,9 +155,14 @@ export function Navbar() {
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" asChild>
+                <Button variant="ghost" size="icon" asChild className="relative">
                   <Link href="/notifications">
-                    <Bell className="h-5 w-5" />
+                    <Bell className={cn("h-5 w-5", unreadCount > 0 && "text-yellow-500")} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-yellow-500 text-[10px] font-bold text-black flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 </Button>
 
